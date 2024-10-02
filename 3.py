@@ -6,41 +6,32 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import GridSearchCV
 
-# Загрузка данных
-data = pd.read_csv('датасет_кофе_чай.csv', encoding='cp1251', sep=';')
 
-# Преобразование времени 'wake_up' в количество минут с начала дня
-def time_to_minutes(time_str):
-    hours, minutes = map(int, time_str.split(':'))
-    return hours * 60 + minutes
-
-data['wake_up'] = data['wake_up'].apply(time_to_minutes)
+data = pd.read_csv('2024-09-23 Sotsiologicheskii opros.csv', encoding='cp1251', sep=';')
 
 # Преобразование категориальных признаков
 label_encoders = {}
-for column in ['weather', 'availability_coffee', 'availability_tea', 'day_of_the_week', 'mood']:
+for column in data.columns:
     le = LabelEncoder()
     data[column] = le.fit_transform(data[column])
     label_encoders[column] = le
 
-# Признаки и целевая переменная
-X = data.drop('drink', axis=1)
-y = data['drink']
+X = data.drop('Что вы предпочитаете?', axis=1)
+y = data['Что вы предпочитаете?']
 
 # Нормализация числовых признаков
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
 # Разделение данных на тренировочные и тестовые
-X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.4, random_state=55)
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=20)
 
-# Подбор оптимального k с помощью GridSearchCV
+# Подбор оптимального k
 param_grid = {'n_neighbors': list(range(1, 21))}
 knn = KNeighborsClassifier()
 grid_search = GridSearchCV(knn, param_grid, cv=5, scoring='accuracy')
 grid_search.fit(X_train, y_train)
 
-# Лучшая модель
 best_k = grid_search.best_params_['n_neighbors']
 print(f"Лучшее значение k: {best_k}")
 
@@ -48,9 +39,18 @@ print(f"Лучшее значение k: {best_k}")
 knn_best = KNeighborsClassifier(n_neighbors=best_k)
 knn_best.fit(X_train, y_train)
 
-# Прогнозирование
-y_pred = knn_best.predict(X_test)
+y_pred_best = knn_best.predict(X_test)
 
-# Оценка точности
-accuracy = accuracy_score(y_test, y_pred)
-print(f"Точность модели: {accuracy:.2f}")
+# Оценка точности для лучшего k
+accuracy_best = accuracy_score(y_test, y_pred_best)
+print(f"Точность модели с лучшим k ({best_k}): {accuracy_best:.2f}")
+
+# Обучение модели с k=4
+knn_k4 = KNeighborsClassifier(n_neighbors=5)
+knn_k4.fit(X_train, y_train)
+
+y_pred_k4 = knn_k4.predict(X_test)
+
+# Оценка точности для k=4
+accuracy_k4 = accuracy_score(y_test, y_pred_k4)
+print(f"Точность модели с k=4: {accuracy_k4:.2f}")
